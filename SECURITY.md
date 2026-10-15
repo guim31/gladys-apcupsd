@@ -30,6 +30,18 @@ Gladys before reporting a problem.
 
 In scope: the code of this repository and the Docker image it publishes.
 
+What the integration handles:
+
+- **Network**: it only opens TCP connections to the apcupsd servers entered in
+  its configuration (port 3551 by default) and sends them the read-only
+  `status` command. It listens on no port and calls no cloud service.
+- **Secrets**: none. The apcupsd network information server has no
+  credentials, and the configuration holds addresses only.
+- **`/data`**: `apcupsd-state.json` keeps the energy index of each UPS, the last
+  status read from each server (model, serial number, readings) and the last
+  power state. Nothing else is written.
+
 Out of scope: Gladys Assistant itself (see its
 [security policy](https://github.com/GladysAssistant/Gladys/security/policy)),
-and the third-party services and devices the integration talks to.
+apcupsd and its network server (which anyone on the network can read: restrict
+it with your firewall if that matters to you), and the UPS.

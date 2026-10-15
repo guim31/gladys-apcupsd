@@ -11,13 +11,18 @@ Gladys through
 [`@gladysassistant/integration-sdk`](https://github.com/GladysAssistant/integration-sdk-js),
 its only runtime dependency. It started from the official JavaScript template.
 
+This one follows APC UPSs monitored by **apcupsd**, through its network
+information server (NIS): one device per UPS, scene triggers on power events,
+one dashboard widget. Read-only.
+
 ## Commands
 
 ```bash
 npm install
 npm test                                  # node --test, the built-in runner
-node --test test/devices.test.js          # one file
-node --test --test-name-pattern "plug"    # tests whose name matches
+node --test test/monitor.test.js          # one file
+node --test --test-name-pattern "outage"  # tests whose name matches
+node scripts/probe.mjs <host> [port]      # read-only check of a real apcupsd
 npm run lint                              # ESLint
 npm run format:check                      # Prettier, as the CI runs it
 npm run format                            # Prettier, fix in place
@@ -31,16 +36,24 @@ pushing.
 ## Architecture
 
 ```
-index.js                          SDK wiring only: handlers registered before connect()
-src/devices/index.js              registry of the device blueprints + dispatch helpers
-src/devices/<type>.js             one device type per file (buildDevice, onPoll, onSetValue...)
-src/scenes.js                     scene action handlers (manifest `scene_actions`)
-src/widgets.js                    dashboard widget handlers (manifest `widgets`)
-src/config.js                     DEFAULT_CONFIG (mirrors the manifest defaults) + normalization
-src/weather.js                    example driver (Open-Meteo)
+index.js                          SDK wiring only (src/app.js registers the handlers)
+src/app.js                        every SDK handler, before connect(); returns the monitor
+src/nis.js                        apcupsd NIS client: `status` command, length-prefixed records
+src/ups.js                        raw status → typed reading (pure)
+src/devices.js                    feature catalog (keys are forever), buildDevice, deviceStates
+src/monitor.js                    own polling timer, states, triggers, transports, connection status
+src/energy.js                     kWh index integrated from the estimated power
+src/triggers.js                   scene triggers: transitions between two reads (pure)
+src/widgets.js                    the `ups` dashboard widget
+src/i18n.js                       texts in en/fr/de/es (status words, transfer reasons, names)
+src/store.js                      /data/apcupsd-state.json (energy, last statuses, power state)
+src/issues.js                     a repeated failure logged once, its recovery once
+src/config.js                     DEFAULT_CONFIG (mirrors the manifest defaults) + server parsing
+scripts/probe.mjs                 read-only probe of a real apcupsd (run by the orchestrator)
 gladys-assistant-integration.json manifest: name, config_schema, actions, image...
-docs/en.md, docs/fr.md            user documentation, re-hosted by Gladys (mandatory)
-test/                             node --test, against the SDK's fake Gladys (integration-sdk/testing)
+docs/{en,fr,de,es}.md             user documentation, re-hosted by Gladys, same sections
+test/                             node --test, against the SDK's fake Gladys and a fake NIS server
+test/fixtures/apcupsd/            real statuses (Home Assistant, aioapcaccess), see its README
 .github/scripts/release.mjs       release helpers (manifest bump, changelog), tested in test/
 ```
 
@@ -70,10 +83,54 @@ test/                             node --test, against the SDK's fake Gladys (in
   `type: "provider"`: 5.1.0). `test/manifest.test.js` ties the manifest to the
   code (defaults, action, scene and widget handlers): change both sides
   together.
-- **User-facing text** is bilingual (English and French): action messages,
-  manifest texts, and `docs/en.md` / `docs/fr.md`, kept in sync.
+- **User-facing text** exists in four languages (English, French, German with
+  "du", Spanish with "usted"): action messages, manifest texts, feature names,
+  widget texts, and `docs/en.md`, `fr.md`, `de.md`, `es.md`, kept in sync with
+  the same sections. `test/i18n.test.js` checks it.
 - **Style.** Prettier formats, ESLint catches mistakes. Comments explain why,
   in English. Tests never touch the network.
+
+## apcupsd specifics
+
+- **Protocol** (apcupsd NIS, also `apcaccess` and aioapcaccess): TCP, every
+  message is a 2-byte big-endian length then the bytes. Send `status`; the
+  answer is one record per line (`"MODEL    : Back-UPS ES 600\n"`), then an
+  empty record. No authentication, no write command: the integration is
+  read-only by construction. One apcupsd serves one UPS; several UPSs mean
+  several apcupsd (other ports).
+- **The NIS listens on 127.0.0.1 on some distributions**: `NISIP 0.0.0.0` is
+  needed, else "connection refused" (the docs and the connection status say
+  so).
+- **STATUS words** come first (`ONLINE`, `ONBATT`, `LOWBATT`, `REPLACEBATT`,
+  `COMMLOST`, `SHUTTING DOWN`…). `STATFLAG` is only a fallback for old daemons,
+  and its battery-present bit is not read: apcupsd 3.8 never sets it (Home
+  Assistant's minimal fixture), which would read as "no battery". `COMMLOST`
+  means apcupsd lost the UPS: the power state is unknown, the previous one is
+  kept (no false outage).
+- **Serial "Blank"**: some UPS report it; it is no serial (Home Assistant does
+  the same). Without a serial, the platform id is `host-port`.
+- **Dates**: apcupsd writes the epoch (`1970-01-01…`) or `N/A` for "never"
+  (`XONBATT`, `BATTDATE`): no state then. `BATTDATE` formats vary
+  (`2024-03-15`, `13/11/15` with an unknown day/month order): kept as written.
+- **Load has no Gladys category**: `unknown/unknown` in percent. The power is
+  an estimate (`LOADPCT` × `NOMPOWER`), absent without `NOMPOWER` (old
+  Smart-UPS).
+- **Energy**: `energy-sensor/energy` (kWh) is one of the core's index types:
+  since 5.1.0 the core adds the 30-minute consumption and cost features
+  itself (`addEnergyFeatures` in `getDiscoveredDevices`). The index must never
+  decrease (a decrease reads as a counter reset): it lives in `/data`, written
+  on change of state, every 10 minutes and at SIGTERM. A crash loses at most
+  10 minutes of energy, and Gladys skips that one delta. Gaps over 5 minutes
+  are not integrated.
+- **The aioapcaccess raw fixture had two wrong length prefixes** (records its
+  authors edited by hand): corrected in `smart-ups-1400.nis`. apcupsd itself
+  always writes them right; a test decodes the whole fixture.
+- **Triggers** fire on a transition between two reads, never on a first read;
+  the previous power state is persisted (30 minutes max) so an outage during a
+  restart still fires. A short outage between two reads is missed (NUMXFERS
+  still counts it).
+- **Every configured server is read**, device added or not, so the triggers
+  fire for any UPS; states are only published for added devices.
 
 ---
 
@@ -132,7 +189,9 @@ code de ce dépôt. Compléter ce fichier quand un nouveau piège est découvert
   (`gladys.getDevices()`) ou changer d'identifiant.
 - Les **noms de fonctionnalités sont figés à la création**. Et quand une fonctionnalité est seule
   de son type sur l'appareil, le tableau de bord affiche le libellé générique du type à la place
-  du nom publié.
+  du nom publié. « Type » au sens strict : `matchFeature` (front `utils/device.js`, 5.2.1) ne
+  compare que `type`, pas la catégorie. `input/binary` et `battery-low/binary` sur le même appareil
+  affichent donc tous deux leur nom (relevé sur gladys-apcupsd).
 - **Aucune commande d'appareil ne permet un choix multiple** : un `text/select` n'a qu'un choix
   actif.
 - Un changement de structure fait proposer « Mettre à jour » dans l'onglet Découverte
