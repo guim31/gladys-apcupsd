@@ -7,9 +7,9 @@ estimation de la puissance consommée par vos équipements et de son énergie. L
 scènes peuvent réagir à une coupure de courant, au retour du courant, à une
 batterie faible et à une batterie à remplacer.
 
-> **Développée sans le matériel : vos retours sont les bienvenus.**
-> L'intégration a été construite et testée avec de vraies réponses d'apcupsd
-> publiées par d'autres projets, pas avec un onduleur sur le bureau. Si quelque
+> **Testée sur du vrai matériel : un onduleur APC Smart-UPS SRT branché en USB
+> à un serveur Unraid qui fait tourner apcupsd 3.14.** Elle a aussi été testée
+> avec de vraies réponses d'apcupsd publiées par d'autres projets. Si quelque
 > chose cloche avec votre modèle, ouvrez une issue sur GitHub avec la sortie de
 > `apcaccess status` (masquez le numéro de série).
 
@@ -178,7 +178,7 @@ Déclencheur **Onduleur : courant rétabli**, action **Envoyer un message** :
   apcupsd redémarre.
 - Lecture seule : ni autotest, ni arrêt, ni changement de réglage depuis
   Gladys.
-- Développée sans le matériel : testée avec de vrais états d'apcupsd (Back-UPS
+- Testée sur un vrai onduleur (Smart-UPS SRT en USB) et avec de vrais états d'apcupsd (Back-UPS
   ES 600, SMART-UPS 1400, un vieil apcupsd 3.8) et un serveur simulé.
 - Pour un onduleur surveillé par NUT plutôt que par apcupsd, utilisez une
   intégration NUT.

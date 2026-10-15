@@ -7,12 +7,11 @@ ihrer Energie. Szenen können auf einen Stromausfall, auf die Rückkehr des
 Stroms, auf eine schwache Batterie und auf eine zu ersetzende Batterie
 reagieren.
 
-> **Ohne die Hardware entwickelt: Rückmeldungen sind willkommen.** Die
-> Integration wurde mit echten apcupsd-Antworten gebaut und getestet, die
-> andere Projekte veröffentlicht haben, nicht mit einer USV auf dem
-> Schreibtisch. Wenn bei deinem Modell etwas nicht stimmt, eröffne ein Issue
-> auf GitHub mit der Ausgabe von `apcaccess status` (verberge die
-> Seriennummer).
+> **Mit echter Hardware getestet: eine APC Smart-UPS SRT, per USB an einem
+> Unraid-Server mit apcupsd 3.14.** Außerdem mit echten apcupsd-Antworten
+> getestet, die andere Projekte veröffentlicht haben. Wenn bei deinem Modell
+> etwas nicht stimmt, eröffne ein Issue auf GitHub mit der Ausgabe von
+> `apcaccess status` (Seriennummer unkenntlich machen).
 
 Diese Integration steht in keiner Verbindung zu APC oder Schneider Electric.
 
@@ -175,6 +174,6 @@ nach [Dauer des Ausfalls] Sekunden zurück.“
   null, wenn apcupsd neu startet.
 - Nur lesend: kein Selbsttest, kein Herunterfahren, keine Änderung von
   Einstellungen aus Gladys.
-- Ohne die Hardware entwickelt: getestet mit echten apcupsd-Status (Back-UPS
+- Mit einer echten USV getestet (Smart-UPS SRT per USB) und mit echten apcupsd-Status (Back-UPS
   ES 600, SMART-UPS 1400, ein altes apcupsd 3.8) und einem simulierten Server.
 - Für eine USV, die NUT statt apcupsd überwacht, nutze eine NUT-Integration.

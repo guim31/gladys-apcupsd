@@ -6,10 +6,11 @@ daemon Unraid, many NAS and Linux servers use, through its network information
 server (NIS, TCP port 3551). Local network only, no cloud, no account,
 read-only.
 
-> **Developed without the hardware: feedback welcome.** The integration is
-> built and tested against real apcupsd statuses published by the Home
-> Assistant and aioapcaccess projects (a Back-UPS ES 600, a SMART-UPS 1400, an
-> old apcupsd 3.8) and a simulated NIS server, not against a physical UPS.
+> **Tested on real hardware: an APC Smart-UPS SRT connected over USB to an
+> Unraid server running apcupsd 3.14.** It is also tested against real apcupsd
+> statuses published by the Home Assistant and aioapcaccess projects (a
+> Back-UPS ES 600, a SMART-UPS 1400, an old apcupsd 3.8) and a simulated NIS
+> server. Feedback on other models is welcome.
 > Please report what works and what does not in the
 > [issues](https://github.com/guim31/gladys-apcupsd/issues), with the output
 > of `apcaccess status` (hide the serial number).
@@ -82,7 +83,7 @@ Integration container ──TCP 3551: "status"──▶ apcupsd (NIS) ──USB/
 
 ## Limitations
 
-- **Developed without the hardware**: see above.
+- **Tested on one real UPS** (Smart-UPS SRT over USB): other models may report fewer fields; see above.
 - An outage shorter than the refresh interval can be missed by the triggers
   (the transfer counter still counts it).
 - The power and the energy are estimates: apcupsd gives a load in percent of

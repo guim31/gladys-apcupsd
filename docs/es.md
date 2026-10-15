@@ -7,11 +7,11 @@ consumen sus equipos y de su energía. Las escenas pueden reaccionar a un corte
 de luz, a la vuelta de la luz, a una batería baja y a una batería que hay que
 sustituir.
 
-> **Desarrollada sin el hardware: sus comentarios son bienvenidos.** La
-> integración se ha construido y probado con respuestas reales de apcupsd
-> publicadas por otros proyectos, no con un SAI sobre la mesa. Si algo no
-> cuadra con su modelo, abra una incidencia en GitHub con la salida de
-> `apcaccess status` (oculte el número de serie).
+> **Probada con hardware real: un SAI APC Smart-UPS SRT conectado por USB a un
+> servidor Unraid con apcupsd 3.14.** También se ha probado con respuestas
+> reales de apcupsd publicadas por otros proyectos. Si algo no cuadra con su
+> modelo, abra una incidencia en GitHub con la salida de `apcaccess status`
+> (oculte el número de serie).
 
 Esta integración no está afiliada a APC ni a Schneider Electric.
 
@@ -172,7 +172,7 @@ vuelto tras [Duración del corte] segundos.»
 - El número de transferencias y los tiempos con batería vuelven a cero cuando
   apcupsd se reinicia.
 - Solo lectura: ni autotest, ni apagado, ni cambio de ajustes desde Gladys.
-- Desarrollada sin el hardware: probada con estados reales de apcupsd
+- Probada con un SAI real (Smart-UPS SRT por USB) y con estados reales de apcupsd
   (Back-UPS ES 600, SMART-UPS 1400, un apcupsd 3.8 antiguo) y un servidor
   simulado.
 - Para un SAI vigilado por NUT en lugar de apcupsd, use una integración NUT.

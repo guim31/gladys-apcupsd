@@ -6,11 +6,11 @@ runtime, load, voltages, an estimate of the power drawn by your equipment and
 its energy. Scenes can react to a power outage, to the power coming back, to a
 low battery and to a battery to replace.
 
-> **Developed without the hardware: feedback welcome.** The integration was
-> built and tested against real apcupsd answers published by other projects,
-> not against a UPS on a desk. If something looks wrong with your model, open
-> an issue on GitHub with the output of `apcaccess status` (hide the serial
-> number).
+> **Tested on real hardware: an APC Smart-UPS SRT connected over USB to an
+> Unraid server running apcupsd 3.14.** It was also built and tested against
+> real apcupsd answers published by other projects. If something looks wrong
+> with your model, open an issue on GitHub with the output of
+> `apcaccess status` (hide the serial number).
 
 This integration is not affiliated with APC or Schneider Electric.
 
@@ -166,6 +166,6 @@ after [Outage duration] seconds."
 - The Transfers counter and the times on battery start again from zero when
   apcupsd restarts.
 - Read-only: no self-test, no shutdown, no setting changes from Gladys.
-- Developed without the hardware: tested with real apcupsd statuses (Back-UPS
+- Tested on one real UPS (Smart-UPS SRT over USB) and on real apcupsd statuses (Back-UPS
   ES 600, SMART-UPS 1400, an old apcupsd 3.8) and a simulated server.
 - For a UPS watched by NUT instead of apcupsd, use a NUT integration.
