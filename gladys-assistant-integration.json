@@ -1,177 +1,426 @@
 {
   "manifest_version": 1,
   "type": "device",
-  "name": "Demo Devices Template",
+  "name": "APC UPS Daemon",
   "description": {
-    "en": "Starter template showing sensors, a switch, a dimmable light and a smart plug.",
-    "fr": "Template de démarrage : capteurs, interrupteur, lampe variable et prise connectée."
+    "en": "APC UPSs monitored by apcupsd: power outages, battery, runtime, load, power and energy.",
+    "fr": "Onduleurs APC suivis par apcupsd : coupures de courant, batterie, autonomie, charge, énergie.",
+    "de": "Von apcupsd überwachte APC-USVs: Stromausfälle, Batterie, Restlaufzeit, Last, Energie.",
+    "es": "SAI APC supervisados por apcupsd: cortes de luz, batería, autonomía, carga y energía."
   },
   "version": "1.0.0",
-  "docker_image": "ghcr.io/gladysassistant/integration-template-js:1.0.0",
+  "docker_image": "ghcr.io/guim31/gladys-apcupsd:1.0.0",
   "gladys_version": ">=5.1.0",
-  "cover_image": "https://raw.githubusercontent.com/GladysAssistant/integration-template-js/master/cover.png",
-  "categories": ["lighting", "security", "environment"],
-  "transports": ["local", "cloud"],
+  "cover_image": "https://raw.githubusercontent.com/guim31/gladys-apcupsd/main/cover.png",
+  "categories": ["energy"],
+  "transports": ["local"],
   "config_schema": [
     {
       "key": "intro",
       "type": "section",
-      "label": { "en": "Getting started", "fr": "Pour commencer" },
+      "label": {
+        "en": "Before you start",
+        "fr": "Avant de commencer",
+        "de": "Bevor du beginnst",
+        "es": "Antes de empezar"
+      },
       "description": {
-        "en": "The demo weather station reads real data from the free Open-Meteo API: pick the coordinates to observe. No account, no API key.",
-        "fr": "La station météo de démonstration lit de vraies données via l'API gratuite Open-Meteo : choisissez les coordonnées à observer. Pas de compte, pas de clé d'API."
+        "en": "Gladys reads your UPS through the network server (NIS) of apcupsd, on port 3551. It must listen on the network: set NISIP 0.0.0.0 in apcupsd.conf and restart apcupsd (on Unraid, enable the network server in the UPS settings).",
+        "fr": "Gladys lit votre onduleur par le serveur réseau (NIS) d'apcupsd, sur le port 3551. Il doit écouter sur le réseau : mettez NISIP 0.0.0.0 dans apcupsd.conf et redémarrez apcupsd (sur Unraid, activez le serveur réseau dans les réglages de l'onduleur).",
+        "de": "Gladys liest deine USV über den Netzwerkserver (NIS) von apcupsd auf Port 3551. Er muss im Netzwerk lauschen: Setze NISIP 0.0.0.0 in apcupsd.conf und starte apcupsd neu (unter Unraid aktivierst du den Netzwerkserver in den USV-Einstellungen).",
+        "es": "Gladys lee su SAI a través del servidor de red (NIS) de apcupsd, en el puerto 3551. Debe escuchar en la red: ponga NISIP 0.0.0.0 en apcupsd.conf y reinicie apcupsd (en Unraid, active el servidor de red en los ajustes del SAI)."
       },
       "links": [
         {
-          "url": "https://open-meteo.com/en/docs",
-          "label": { "en": "Open-Meteo documentation", "fr": "Documentation Open-Meteo" }
+          "url": "https://github.com/guim31/gladys-apcupsd/blob/main/docs/en.md",
+          "label": {
+            "en": "Setup guide",
+            "fr": "Guide d'installation",
+            "de": "Installationsanleitung",
+            "es": "Guía de instalación"
+          }
         }
       ]
     },
     {
-      "key": "latitude",
-      "type": "number",
-      "label": { "en": "Latitude", "fr": "Latitude" },
-      "description": {
-        "en": "Latitude used for the demo weather sensor.",
-        "fr": "Latitude utilisée par le capteur météo de démonstration."
+      "key": "servers",
+      "type": "string",
+      "label": {
+        "en": "apcupsd servers",
+        "fr": "Serveurs apcupsd",
+        "de": "apcupsd-Server",
+        "es": "Servidores apcupsd"
       },
-      "placeholder": { "en": "e.g. 48.8566", "fr": "ex. 48.8566" },
-      "required": true,
-      "default": 48.8566,
-      "min": -90,
-      "max": 90
+      "description": {
+        "en": "IP address of the computer running apcupsd, with :port if it is not 3551. Several servers (one per UPS) are separated by commas.",
+        "fr": "Adresse IP de l'ordinateur où tourne apcupsd, suivie de :port si ce n'est pas 3551. Plusieurs serveurs (un par onduleur) se séparent par des virgules.",
+        "de": "IP-Adresse des Rechners, auf dem apcupsd läuft, mit :Port, falls nicht 3551. Mehrere Server (einer pro USV) trennst du mit Kommas.",
+        "es": "Dirección IP del equipo donde se ejecuta apcupsd, seguida de :puerto si no es 3551. Varios servidores (uno por SAI) se separan con comas."
+      },
+      "placeholder": {
+        "en": "e.g. 192.0.2.10, 192.0.2.11:3552",
+        "fr": "ex. 192.0.2.10, 192.0.2.11:3552",
+        "de": "z. B. 192.0.2.10, 192.0.2.11:3552",
+        "es": "p. ej. 192.0.2.10, 192.0.2.11:3552"
+      },
+      "required": true
     },
     {
-      "key": "longitude",
-      "type": "number",
-      "label": { "en": "Longitude", "fr": "Longitude" },
-      "description": {
-        "en": "Longitude used for the demo weather sensor.",
-        "fr": "Longitude utilisée par le capteur météo de démonstration."
-      },
-      "placeholder": { "en": "e.g. 2.3522", "fr": "ex. 2.3522" },
-      "required": true,
-      "default": 2.3522,
-      "min": -180,
-      "max": 180
-    },
-    {
-      "key": "unit",
+      "key": "poll_interval",
       "type": "select",
-      "label": { "en": "Temperature unit", "fr": "Unité de température" },
+      "label": {
+        "en": "Refresh interval",
+        "fr": "Intervalle de rafraîchissement",
+        "de": "Aktualisierungsintervall",
+        "es": "Intervalo de actualización"
+      },
+      "description": {
+        "en": "How often the UPS is read. A power outage is seen within this delay.",
+        "fr": "Fréquence de lecture de l'onduleur. Une coupure de courant est vue dans ce délai.",
+        "de": "Wie oft die USV gelesen wird. Ein Stromausfall wird innerhalb dieser Zeit erkannt.",
+        "es": "Frecuencia de lectura del SAI. Un corte de luz se detecta dentro de este plazo."
+      },
       "required": false,
-      "default": "celsius",
+      "default": "10",
       "options": [
-        { "value": "celsius", "label": { "en": "Celsius", "fr": "Celsius" } },
-        { "value": "fahrenheit", "label": { "en": "Fahrenheit", "fr": "Fahrenheit" } }
+        {
+          "value": "5",
+          "label": { "en": "5 seconds", "fr": "5 secondes", "de": "5 Sekunden", "es": "5 segundos" }
+        },
+        {
+          "value": "10",
+          "label": {
+            "en": "10 seconds",
+            "fr": "10 secondes",
+            "de": "10 Sekunden",
+            "es": "10 segundos"
+          }
+        },
+        {
+          "value": "30",
+          "label": {
+            "en": "30 seconds",
+            "fr": "30 secondes",
+            "de": "30 Sekunden",
+            "es": "30 segundos"
+          }
+        },
+        {
+          "value": "60",
+          "label": { "en": "1 minute", "fr": "1 minute", "de": "1 Minute", "es": "1 minuto" }
+        }
       ]
     },
     {
-      "key": "poll_frequency",
-      "type": "number",
-      "label": { "en": "Refresh interval (s)", "fr": "Intervalle de rafraîchissement (s)" },
+      "key": "language",
+      "type": "select",
+      "label": {
+        "en": "Language of the device texts",
+        "fr": "Langue des textes des appareils",
+        "de": "Sprache der Gerätetexte",
+        "es": "Idioma de los textos de los dispositivos"
+      },
       "description": {
-        "en": "How often sensors are polled, in seconds (one minute minimum).",
-        "fr": "Fréquence d'interrogation des capteurs, en secondes (une minute minimum)."
+        "en": "Names of the features of new devices, and the texts the UPS shows (state, last transfer reason).",
+        "fr": "Noms des fonctionnalités des nouveaux appareils, et textes affichés par l'onduleur (état, raison du dernier transfert).",
+        "de": "Namen der Funktionen neuer Geräte und die Texte der USV (Status, Grund der letzten Umschaltung).",
+        "es": "Nombres de las funciones de los nuevos dispositivos y textos del SAI (estado, motivo de la última transferencia)."
       },
       "required": false,
-      "default": 300,
-      "min": 60,
-      "max": 3600
+      "default": "fr",
+      "options": [
+        {
+          "value": "en",
+          "label": { "en": "English", "fr": "Anglais", "de": "Englisch", "es": "Inglés" }
+        },
+        {
+          "value": "fr",
+          "label": { "en": "French", "fr": "Français", "de": "Französisch", "es": "Francés" }
+        },
+        {
+          "value": "de",
+          "label": { "en": "German", "fr": "Allemand", "de": "Deutsch", "es": "Alemán" }
+        },
+        {
+          "value": "es",
+          "label": { "en": "Spanish", "fr": "Espagnol", "de": "Spanisch", "es": "Español" }
+        }
+      ]
     }
   ],
   "actions": [
     {
-      "key": "test_weather",
-      "label": { "en": "Test the weather provider", "fr": "Tester le fournisseur météo" },
+      "key": "check_servers",
+      "label": {
+        "en": "Check the servers",
+        "fr": "Vérifier les serveurs",
+        "de": "Server prüfen",
+        "es": "Comprobar los servidores"
+      },
       "timeout_seconds": 30
-    },
-    {
-      "key": "identify",
-      "label": { "en": "Identify a device", "fr": "Identifier un appareil" },
-      "fields": [
-        {
-          "key": "device",
-          "type": "select",
-          "source": "devices",
-          "label": { "en": "Device", "fr": "Appareil" },
-          "required": true
-        }
-      ]
     }
   ],
   "scene_triggers": [
     {
-      "key": "motion_detected",
-      "label": { "en": "Motion detected", "fr": "Mouvement détecté" },
+      "key": "power_outage",
+      "label": {
+        "en": "UPS: power outage",
+        "fr": "Onduleur : coupure de courant",
+        "de": "USV: Stromausfall",
+        "es": "SAI: corte de luz"
+      },
       "description": {
-        "en": "A demo motion sensor saw a person or an animal move.",
-        "fr": "Un détecteur de démonstration a vu bouger une personne ou un animal."
+        "en": "The UPS switched to battery.",
+        "fr": "L'onduleur est passé sur batterie.",
+        "de": "Die USV ist auf Batterie umgeschaltet.",
+        "es": "El SAI ha pasado a batería."
       },
       "fields": [
         {
           "key": "device",
           "type": "select",
           "source": "devices",
-          "label": { "en": "Sensor", "fr": "Détecteur" }
-        },
-        {
-          "key": "target",
-          "type": "multi_select",
-          "label": { "en": "What moved", "fr": "Ce qui a bougé" },
-          "options": [
-            { "value": "person", "label": { "en": "Person", "fr": "Personne" } },
-            { "value": "animal", "label": { "en": "Animal", "fr": "Animal" } }
-          ]
+          "label": { "en": "UPS", "fr": "Onduleur", "de": "USV", "es": "SAI" },
+          "description": {
+            "en": "Empty: any UPS.",
+            "fr": "Vide : n'importe quel onduleur.",
+            "de": "Leer: jede USV.",
+            "es": "Vacío: cualquier SAI."
+          }
         }
       ],
       "variables": [
         {
-          "key": "target",
+          "key": "device_name",
           "type": "string",
-          "label": { "en": "What moved", "fr": "Ce qui a bougé" }
+          "label": {
+            "en": "UPS name",
+            "fr": "Nom de l'onduleur",
+            "de": "Name der USV",
+            "es": "Nombre del SAI"
+          }
+        },
+        {
+          "key": "battery_charge",
+          "type": "number",
+          "label": {
+            "en": "Battery charge (%)",
+            "fr": "Charge de la batterie (%)",
+            "de": "Batterieladung (%)",
+            "es": "Carga de la batería (%)"
+          }
+        },
+        {
+          "key": "runtime",
+          "type": "number",
+          "label": {
+            "en": "Runtime (minutes)",
+            "fr": "Autonomie (minutes)",
+            "de": "Restlaufzeit (Minuten)",
+            "es": "Autonomía (minutos)"
+          }
         }
       ]
-    }
-  ],
-  "scene_actions": [
+    },
     {
-      "key": "identify_device",
-      "label": { "en": "Identify a device", "fr": "Identifier un appareil" },
-      "description": {
-        "en": "Make a device signal itself (the demo light blinks).",
-        "fr": "Fait se signaler un appareil (la lampe de démonstration clignote)."
+      "key": "power_restored",
+      "label": {
+        "en": "UPS: power restored",
+        "fr": "Onduleur : courant rétabli",
+        "de": "USV: Strom wieder da",
+        "es": "SAI: luz restablecida"
       },
-      "timeout_seconds": 15,
+      "description": {
+        "en": "The UPS is back on mains power after an outage.",
+        "fr": "L'onduleur est revenu sur secteur après une coupure.",
+        "de": "Die USV läuft nach einem Ausfall wieder mit Netzstrom.",
+        "es": "El SAI ha vuelto a la red eléctrica tras un corte."
+      },
       "fields": [
         {
           "key": "device",
           "type": "select",
           "source": "devices",
-          "label": { "en": "Device", "fr": "Appareil" },
-          "required": true
+          "label": { "en": "UPS", "fr": "Onduleur", "de": "USV", "es": "SAI" },
+          "description": {
+            "en": "Empty: any UPS.",
+            "fr": "Vide : n'importe quel onduleur.",
+            "de": "Leer: jede USV.",
+            "es": "Vacío: cualquier SAI."
+          }
         }
       ],
-      "outputs": [
+      "variables": [
         {
-          "key": "signalled",
-          "type": "boolean",
-          "label": { "en": "Device signalled", "fr": "Appareil signalé" }
+          "key": "device_name",
+          "type": "string",
+          "label": {
+            "en": "UPS name",
+            "fr": "Nom de l'onduleur",
+            "de": "Name der USV",
+            "es": "Nombre del SAI"
+          }
+        },
+        {
+          "key": "battery_charge",
+          "type": "number",
+          "label": {
+            "en": "Battery charge (%)",
+            "fr": "Charge de la batterie (%)",
+            "de": "Batterieladung (%)",
+            "es": "Carga de la batería (%)"
+          }
+        },
+        {
+          "key": "outage_duration",
+          "type": "number",
+          "label": {
+            "en": "Outage duration (seconds)",
+            "fr": "Durée de la coupure (secondes)",
+            "de": "Dauer des Ausfalls (Sekunden)",
+            "es": "Duración del corte (segundos)"
+          }
+        }
+      ]
+    },
+    {
+      "key": "battery_low",
+      "label": {
+        "en": "UPS: battery low",
+        "fr": "Onduleur : batterie faible",
+        "de": "USV: Batterie schwach",
+        "es": "SAI: batería baja"
+      },
+      "description": {
+        "en": "The UPS reports a low battery: shutdown is near.",
+        "fr": "L'onduleur signale une batterie faible : l'arrêt est proche.",
+        "de": "Die USV meldet eine schwache Batterie: Die Abschaltung steht bevor.",
+        "es": "El SAI indica batería baja: el apagado está cerca."
+      },
+      "fields": [
+        {
+          "key": "device",
+          "type": "select",
+          "source": "devices",
+          "label": { "en": "UPS", "fr": "Onduleur", "de": "USV", "es": "SAI" },
+          "description": {
+            "en": "Empty: any UPS.",
+            "fr": "Vide : n'importe quel onduleur.",
+            "de": "Leer: jede USV.",
+            "es": "Vacío: cualquier SAI."
+          }
+        }
+      ],
+      "variables": [
+        {
+          "key": "device_name",
+          "type": "string",
+          "label": {
+            "en": "UPS name",
+            "fr": "Nom de l'onduleur",
+            "de": "Name der USV",
+            "es": "Nombre del SAI"
+          }
+        },
+        {
+          "key": "battery_charge",
+          "type": "number",
+          "label": {
+            "en": "Battery charge (%)",
+            "fr": "Charge de la batterie (%)",
+            "de": "Batterieladung (%)",
+            "es": "Carga de la batería (%)"
+          }
+        },
+        {
+          "key": "runtime",
+          "type": "number",
+          "label": {
+            "en": "Runtime (minutes)",
+            "fr": "Autonomie (minutes)",
+            "de": "Restlaufzeit (Minuten)",
+            "es": "Autonomía (minutos)"
+          }
+        }
+      ]
+    },
+    {
+      "key": "replace_battery",
+      "label": {
+        "en": "UPS: replace the battery",
+        "fr": "Onduleur : batterie à remplacer",
+        "de": "USV: Batterie ersetzen",
+        "es": "SAI: sustituir la batería"
+      },
+      "description": {
+        "en": "The UPS asks for a new battery (usually after a failed self-test).",
+        "fr": "L'onduleur demande une batterie neuve (souvent après un autotest raté).",
+        "de": "Die USV verlangt eine neue Batterie (meist nach einem fehlgeschlagenen Selbsttest).",
+        "es": "El SAI pide una batería nueva (normalmente tras un autotest fallido)."
+      },
+      "fields": [
+        {
+          "key": "device",
+          "type": "select",
+          "source": "devices",
+          "label": { "en": "UPS", "fr": "Onduleur", "de": "USV", "es": "SAI" },
+          "description": {
+            "en": "Empty: any UPS.",
+            "fr": "Vide : n'importe quel onduleur.",
+            "de": "Leer: jede USV.",
+            "es": "Vacío: cualquier SAI."
+          }
+        }
+      ],
+      "variables": [
+        {
+          "key": "device_name",
+          "type": "string",
+          "label": {
+            "en": "UPS name",
+            "fr": "Nom de l'onduleur",
+            "de": "Name der USV",
+            "es": "Nombre del SAI"
+          }
+        },
+        {
+          "key": "battery_date",
+          "type": "string",
+          "label": {
+            "en": "Battery date",
+            "fr": "Date de la batterie",
+            "de": "Batteriedatum",
+            "es": "Fecha de la batería"
+          }
         }
       ]
     }
   ],
   "widgets": [
     {
-      "key": "demo_status",
-      "label": { "en": "Demo status", "fr": "État de la démo" },
+      "key": "ups",
+      "label": { "en": "UPS", "fr": "Onduleur", "de": "USV", "es": "SAI" },
       "description": {
-        "en": "Live temperature and plug power, plug connection and observed location.",
-        "fr": "Température et puissance en direct, connexion de la prise, position observée."
+        "en": "State, battery charge, runtime and load of a UPS.",
+        "fr": "État, charge de la batterie, autonomie et charge d'un onduleur.",
+        "de": "Status, Batterieladung, Restlaufzeit und Last einer USV.",
+        "es": "Estado, carga de la batería, autonomía y carga de un SAI."
       },
-      "icon": "activity",
-      "action_timeout_seconds": 15
+      "icon": "battery-charging",
+      "settings": [
+        {
+          "key": "ups",
+          "type": "select",
+          "source": "devices",
+          "label": { "en": "UPS", "fr": "Onduleur", "de": "USV", "es": "SAI" },
+          "description": {
+            "en": "Empty: the first UPS added.",
+            "fr": "Vide : le premier onduleur ajouté.",
+            "de": "Leer: die zuerst hinzugefügte USV.",
+            "es": "Vacío: el primer SAI añadido."
+          }
+        }
+      ]
     }
   ]
 }

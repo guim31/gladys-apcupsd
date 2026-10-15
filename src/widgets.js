@@ -1,169 +1,145 @@
 // -----------------------------------------------------------------------------
-// Dashboard widgets (SDK v0.14+, Gladys 5.1+).
+// Dashboard widget (manifest `widgets`, Gladys 5.1+): `ups`.
 //
-// A widget puts the integration's own data on the Gladys dashboard without a
-// dedicated core widget. The manifest `widgets` field declares its identity
-// (key, label, icon, optional per-instance `settings`); at runtime the
-// integration returns a DECLARATIVE content — `text`, `value`, `gauge`,
-// `status`, `chart`, `card-list`, `image`, `button` — that the core renders
-// with its own theme, dark mode and translations. No HTML, no CSS.
+// One card per UPS with what matters during an outage: the state in words
+// (colored), and live tiles for the battery charge, the runtime, the load and
+// the estimated power. The tiles are bound to the device features, so they
+// follow the states without any refresh; the status rows are not, and the
+// monitor asks for a refresh when the state changes.
 //
-// Each entry of WIDGETS is keyed by the widget `key` and exposes:
-//   - get(gladys, { settings, language, units, config }): the content,
-//     registered by index.js with `gladys.onWidgetGet(key, ...)`;
-//   - action(gladys, { actionKey, params, settings, config }) (optional): a
-//     tapped `button` carrying an `action`, registered with
-//     `gladys.onWidgetAction`.
-//
-// Check your contents in the tests with `validateWidgetContent` (exported by
-// the SDK, see test/widgets.test.js), or run with DEBUG=gladys-integration-sdk
-// to have the SDK log every violation of the vocabulary and the budget.
+// Read-only: no button. Budget (8 components, 2 texts, 1 status, 6 tiles):
+// up to four tiles, one status list, one caption.
 // -----------------------------------------------------------------------------
 
-import {
-  createLogger,
-  DEVICE_FEATURE_CATEGORIES,
-  DEVICE_TRANSPORTS,
-  WIDGET_COLORS,
-} from '@gladysassistant/integration-sdk';
-import { identifyDevice } from './devices/index.js';
-import { weatherStation } from './devices/weatherStation.js';
-import { plug } from './devices/plug.js';
-import { light } from './devices/light.js';
+import { WIDGET_COLORS } from '@gladysassistant/integration-sdk';
+import { FEATURE_KEYS, deviceIds } from './devices.js';
+import { NAMES, pick, statusText, transferReasonText } from './i18n.js';
+import { WIDGET_KEY } from './monitor.js';
 
-const logger = createLogger({ name: 'widgets' });
-
-// Widget key, as declared in the manifest `widgets` field.
-export const DEMO_STATUS_WIDGET = 'demo_status';
-
-// Keys of the `button` actions the demo_status content declares.
-const DEMO_STATUS_ACTIONS = { IDENTIFY_LIGHT: 'identify_light' };
-
-// How the plug transport reads in the status list.
-const TRANSPORT_STATUS = {
-  [DEVICE_TRANSPORTS.LOCAL]: { value: { en: 'Local', fr: 'Locale' }, color: WIDGET_COLORS.SUCCESS },
-  [DEVICE_TRANSPORTS.CLOUD]: { value: { en: 'Cloud', fr: 'Cloud' }, color: WIDGET_COLORS.INFO },
-  [DEVICE_TRANSPORTS.UNREACHABLE]: {
-    value: { en: 'Unreachable', fr: 'Injoignable' },
-    color: WIDGET_COLORS.DANGER,
+export const TEXT = {
+  noDevice: {
+    en: 'Add your UPS to Gladys from the Discovery tab of the integration.',
+    fr: "Ajoutez votre onduleur à Gladys depuis l'onglet Découverte de l'intégration.",
+    de: 'Füge deine USV in Gladys über den Tab „Entdecken“ der Integration hinzu.',
+    es: 'Añada su SAI a Gladys desde la pestaña Descubrir de la integración.',
+  },
+  unreachable: {
+    en: 'apcupsd unreachable',
+    fr: 'apcupsd injoignable',
+    de: 'apcupsd nicht erreichbar',
+    es: 'apcupsd inaccesible',
+  },
+  waiting: {
+    en: 'Waiting for a first reading',
+    fr: 'En attente de la première lecture',
+    de: 'Warte auf die erste Messung',
+    es: 'Esperando la primera lectura',
+  },
+  state: { en: 'State', fr: 'État', de: 'Status', es: 'Estado' },
+  lastTransfer: {
+    en: 'Last transfer',
+    fr: 'Dernier transfert',
+    de: 'Letzte Umschaltung',
+    es: 'Última transferencia',
+  },
+  estimated: {
+    en: 'Power estimated from the load and the nominal power.',
+    fr: 'Puissance estimée d’après la charge et la puissance nominale.',
+    de: 'Leistung geschätzt aus Last und Nennleistung.',
+    es: 'Potencia estimada a partir de la carga y la potencia nominal.',
   },
 };
 
-// A live tile references a feature by its external_id: read it from the
-// discovery payload itself, so the widget and the device never disagree.
-function featureExternalId(gladys, config, blueprint, category) {
-  const device = blueprint.buildDevice(gladys, config);
-  return device.features.find((feature) => feature.category === category).external_id;
+/** The color of the state: what needs attention first. */
+export function stateColor(ups) {
+  if (ups.commLost || ups.lowBattery || ups.words.has('OVERLOAD')) {
+    return WIDGET_COLORS.DANGER;
+  }
+  if (ups.mains === 0 || ups.replaceBattery || ups.words.has('NOBATT')) {
+    return WIDGET_COLORS.WARNING;
+  }
+  return ups.mains === 1 ? WIDGET_COLORS.SUCCESS : WIDGET_COLORS.NEUTRAL;
 }
 
-function plugConnectionStatus(gladys, config) {
-  const { transport, degraded } = plug.transport(gladys, config);
-  const { value, color } = TRANSPORT_STATUS[transport];
-  if (degraded) {
-    return {
-      value: { en: `${value.en} (degraded mode)`, fr: `${value.fr} (mode dégradé)` },
-      color: WIDGET_COLORS.WARNING,
-    };
+/**
+ * Content of the widget for one UPS reading (pure).
+ * @param {object} gladys
+ * @param {{ id: string, ups?: object, error?: object, stale?: boolean }} entry
+ * @param {string} language
+ */
+export function buildUpsContent(gladys, entry, language) {
+  const ids = deviceIds(gladys, entry.id);
+  const names = NAMES[language] ?? NAMES.en;
+  const { ups } = entry;
+  const components = [];
+  const tile = (name, icon, present) => {
+    if (present) {
+      components.push({
+        type: 'value',
+        label: names[name],
+        icon,
+        device_feature: ids.feature(FEATURE_KEYS[name]),
+      });
+    }
+  };
+  tile('battery', 'battery-charging', ups.batteryCharge !== undefined);
+  tile('runtime', 'clock', ups.timeLeft !== undefined);
+  tile('load', 'activity', ups.loadPct !== undefined);
+  tile('power', 'zap', ups.power !== undefined);
+
+  const items = [];
+  if (entry.error) {
+    items.push({
+      label: pick(TEXT.state, language),
+      value: pick(TEXT.unreachable, language),
+      color: WIDGET_COLORS.DANGER,
+    });
+  } else if (entry.stale || !ups.known) {
+    items.push({
+      label: pick(TEXT.state, language),
+      value: pick(TEXT.waiting, language),
+      color: WIDGET_COLORS.NEUTRAL,
+    });
+  } else {
+    items.push({
+      label: pick(TEXT.state, language),
+      value: statusText(ups.words, language).slice(0, 40),
+      color: stateColor(ups),
+    });
   }
-  return { value, color };
+  const reason = transferReasonText(ups.lastTransferReason, language);
+  if (reason || ups.lastTransferAt) {
+    items.push({
+      label: pick(TEXT.lastTransfer, language),
+      value: [ups.lastTransferAt, reason].filter(Boolean).join(' · ').slice(0, 40),
+      color: WIDGET_COLORS.NEUTRAL,
+    });
+  }
+  components.push({ type: 'status', items });
+  if (ups.power !== undefined) {
+    components.push({ type: 'text', variant: 'caption', text: pick(TEXT.estimated, language) });
+  }
+  return { ttl_seconds: 60, components };
 }
 
 export const WIDGETS = {
-  [DEMO_STATUS_WIDGET]: {
-    // `settings` holds the per-instance values of the declared `settings`
-    // (none here); `language` and `units` are those of the user viewing the
-    // dashboard, for the values you format yourself. Multi-language objects
-    // (`{ en, fr }`) are picked by the core, like everywhere else.
-    async get(gladys, { config }) {
-      logger.debug(`onWidgetGet <- ${DEMO_STATUS_WIDGET}`);
-      return {
-        // Reload policy: the computed parts below only change with the
-        // config, and index.js nudges the widget on every (re)connection and
-        // config update (see refreshWidgets) — the TTL is just a safety net.
-        ttl_seconds: 300,
-        components: [
-          // Device-bound tiles: LIVE, they follow the published states over
-          // the core's real-time path. No TTL, no nudge involved.
-          {
-            type: 'value',
-            label: { en: 'Temperature', fr: 'Température' },
-            icon: 'thermometer',
-            device_feature: featureExternalId(
-              gladys,
-              config,
-              weatherStation,
-              DEVICE_FEATURE_CATEGORIES.TEMPERATURE_SENSOR,
-            ),
-          },
-          {
-            type: 'value',
-            label: { en: 'Office plug', fr: 'Prise du bureau' },
-            icon: 'zap',
-            device_feature: featureExternalId(
-              gladys,
-              config,
-              plug,
-              DEVICE_FEATURE_CATEGORIES.ENERGY_SENSOR,
-            ),
-          },
-          // Computed rows: what the integration knows that no device feature
-          // carries. Served from the core cache until the TTL or a nudge.
-          {
-            type: 'status',
-            items: [
-              {
-                label: { en: 'Plug connection', fr: 'Connexion de la prise' },
-                icon: 'wifi',
-                ...plugConnectionStatus(gladys, config),
-              },
-              {
-                label: { en: 'Observed location', fr: 'Position observée' },
-                icon: 'map-pin',
-                value: `${config.latitude.toFixed(2)}, ${config.longitude.toFixed(2)}`,
-                color: WIDGET_COLORS.NEUTRAL,
-              },
-            ],
-          },
-          // `params` are declared HERE and sent back as-is: the handler never
-          // receives user input (a dashboard can hang on a public wall).
-          {
-            type: 'button',
-            label: { en: 'Identify the light', fr: 'Identifier la lampe' },
-            icon: 'eye',
-            style: 'secondary',
-            action: {
-              key: DEMO_STATUS_ACTIONS.IDENTIFY_LIGHT,
-              params: { device: light.deviceExternalId(gladys) },
-            },
-          },
-        ],
-      };
-    },
-
-    // Resolve an optional toast (string or multi-language object, ≤ 200
-    // characters). After a successful action the core drops the cached
-    // content and every open dashboard refetches it: no nudge needed.
-    async action(gladys, { actionKey, params, config }) {
-      logger.info(`onWidgetAction <- ${DEMO_STATUS_WIDGET}.${actionKey}`);
-      if (actionKey === DEMO_STATUS_ACTIONS.IDENTIFY_LIGHT) {
-        return identifyDevice(gladys, params.device, config);
+  [WIDGET_KEY]: {
+    /**
+     * @param {import('./monitor.js').Monitor} monitor
+     * @param {{ settings?: object, language?: string }} request
+     */
+    get(monitor, { settings = {}, language = 'en' } = {}) {
+      const entries = monitor.createdEntries();
+      const chosen =
+        entries.find((entry) => deviceIds(monitor.gladys, entry.id).device === settings.ups) ??
+        entries[0];
+      if (!chosen || !chosen.ups) {
+        return {
+          ttl_seconds: 60,
+          components: [{ type: 'text', variant: 'body', text: pick(TEXT.noDevice, language) }],
+        };
       }
-      // Throwing acks the action as failed: the message reaches the user.
-      throw new Error(`Unknown widget action: ${actionKey}`);
+      return buildUpsContent(monitor.gladys, chosen, language);
     },
   },
 };
-
-/**
- * Freshness nudge: ask the core to re-pull every widget NOW instead of
- * waiting for the content TTL. Call it when you KNOW a computed content
- * changed (here: the config, which drives the plug transport and the observed
- * location) — and after every (re)connection, since the nudges are
- * fire-and-forget: rate-limited core-side to 1 per 10 s per widget, dropped
- * silently while disconnected.
- */
-export function refreshWidgets(gladys) {
-  for (const key of Object.keys(WIDGETS)) {
-    gladys.requestWidgetRefresh(key);
-  }
-}
