@@ -199,7 +199,7 @@ test('the four documentations have the same sections', async () => {
     }
     assert.match(
       text,
-      /Developed without the hardware|Développée sans le matériel|Ohne die Hardware entwickelt|Desarrollada sin el hardware/,
+      /Tested on real hardware|Testée sur du vrai matériel|Mit echter Hardware getestet|Probada con hardware real/,
     );
   }
   const shape = (lines) => lines.map((line) => line.match(/^#+/)[0]);
