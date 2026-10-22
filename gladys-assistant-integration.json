@@ -8,8 +8,8 @@
     "de": "Von apcupsd überwachte APC-USVs: Stromausfälle, Batterie, Restlaufzeit, Last, Energie.",
     "es": "SAI APC supervisados por apcupsd: cortes de luz, batería, autonomía, carga y energía."
   },
-  "version": "1.0.1",
-  "docker_image": "ghcr.io/guim31/gladys-apcupsd:1.0.1",
+  "version": "1.0.2",
+  "docker_image": "ghcr.io/guim31/gladys-apcupsd:1.0.2",
   "gladys_version": ">=5.1.0",
   "cover_image": "https://raw.githubusercontent.com/guim31/gladys-apcupsd/main/cover.png",
   "categories": ["energy"],
